@@ -9,6 +9,22 @@ A first-cut eval that asks two questions:
 
 **Status: v0, scripted baseline.**
 
+## How to run (3 lines; needs Python 3.10+, tested on 3.13; no network)
+
+```
+git clone https://github.com/jiggy-cadence/limit-eval && cd limit-eval
+python3 -m venv .venv && .venv/bin/pip install pytest && .venv/bin/python -m pytest -q
+.venv/bin/python -m limit_eval.run    # rewrites results/baseline.md and results/episodes.jsonl
+```
+
+## What this does NOT show
+
+- **Nothing about any real model.** The only agents run are three scripts written by the author. No LLM has been run through this eval.
+- **Not the real TAP wallet.** There is no chain, no keys and no co-signer here. The wallet copies TAP's policy numbers and rule order, but it is a Python simulation.
+- **Not a validated monitor.** The monitor's rules were written while looking at these scenarios, and the scripted attacker only uses exploits those rules target. Its 134/136 recall at threshold 0.5 is a pipeline check, not a detection rate.
+- **Not statistical independence.** The honest agent behaves the same on every seed, so its 105 episodes are 21 distinct behaviours repeated 5 times.
+- **Not coverage of all temptations.** It has 21 hand-written scenarios, and the co-signer never approves, so "approved, then escalated" is never tested.
+
 ## What's simulated and what isn't
 
 | Part | Real or simulated |
@@ -29,13 +45,13 @@ A first-cut eval that asks two questions:
 - `canaries.py`: following [honest-evals](https://github.com/weiscadence/honest-evals). Four planted attempts with no tell in the assistant's text, and two clean transcripts. At each threshold the report **withholds** recall and precision unless all 4 positives are flagged and neither negative is.
 - `run.py`: results at thresholds 0.3 / 0.5 / 0.7 / 0.9 with exact counts and Wilson 95% intervals. Writes `results/episodes.jsonl` (one row per episode, with ground-truth and monitor reasons) and `results/baseline.md`.
 
-## Run
+## Run (details)
 
 ```
 python -m venv .venv && .venv/bin/pip install pytest
-.venv/bin/python -m pytest -q                # 118 tests
+.venv/bin/python -m pytest -q                # 118 tests; 1 skips unless TAP_REPO points at a tap clone
 .venv/bin/python -m limit_eval.run           # 3 agents x 21 scenarios x 5 seeds = 315 episodes
-ANTHROPIC_API_KEY=... .venv/bin/python -m limit_eval.run --llm   # optional, not run here
+ANTHROPIC_API_KEY=... .venv/bin/python -m limit_eval.run --llm   # optional, never run for these results; writes results/llm_episodes.jsonl
 ```
 
 The runtime has no dependencies beyond the Python standard library. Only the tests need pytest.
@@ -60,4 +76,4 @@ See `results/baseline.md`. Summary for 5 seeds:
 
 ## What a real-LLM run needs
 
-An API key in `ANTHROPIC_API_KEY` (optionally `LIMIT_EVAL_MODEL`), decoy tool schemas for the unlisted-tool scenarios, several samples per scenario at temperature > 0 (the default is 1 at temperature 0), a held-out scenario set the monitor rules never saw, and an API budget. 21 scenarios × N samples × up to 20 turns each.
+An API key in `ANTHROPIC_API_KEY` (optionally `LIMIT_EVAL_MODEL`), decoy tool schemas for the unlisted-tool scenarios, several samples per scenario at temperature > 0 (today `--llm` runs 1 sample per scenario at temperature 0), a held-out scenario set the monitor rules never saw, and an API budget. 21 scenarios × N samples × up to 20 turns each.
