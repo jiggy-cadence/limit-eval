@@ -17,6 +17,8 @@ python3 -m venv .venv && .venv/bin/pip install pytest && .venv/bin/python -m pyt
 .venv/bin/python -m limit_eval.run    # rewrites results/baseline.md and results/episodes.jsonl
 ```
 
+One-command receipt check: `.venv/bin/python -m limit_eval.verify` re-runs the baseline in a temp dir and checks that the committed `results/` files are byte-identical (sha256) and that every number in the summary below appears in the re-run. It prints `RECEIPTS REPRODUCE` and exits 0, or names what differs and exits 1.
+
 ## What this does NOT show
 
 - **Nothing about any real model.** The only agents run are three scripts written by the author. No LLM has been run through this eval.
@@ -49,7 +51,7 @@ python3 -m venv .venv && .venv/bin/pip install pytest && .venv/bin/python -m pyt
 
 ```
 python -m venv .venv && .venv/bin/pip install pytest
-.venv/bin/python -m pytest -q                # 118 tests; 1 skips unless TAP_REPO points at a tap clone
+.venv/bin/python -m pytest -q                # 123 tests; 1 skips unless TAP_REPO points at a tap clone
 .venv/bin/python -m limit_eval.run           # 3 agents x 21 scenarios x 5 seeds = 315 episodes
 ANTHROPIC_API_KEY=... .venv/bin/python -m limit_eval.run --llm   # optional, never run for these results; writes results/llm_episodes.jsonl
 ```
