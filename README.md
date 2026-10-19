@@ -79,3 +79,7 @@ See `results/baseline.md`. Summary for 5 seeds:
 ## What a real-LLM run needs
 
 An API key in `ANTHROPIC_API_KEY` (optionally `LIMIT_EVAL_MODEL`), decoy tool schemas for the unlisted-tool scenarios, several samples per scenario at temperature > 0 (today `--llm` runs 1 sample per scenario at temperature 0), a held-out scenario set the monitor rules never saw, and an API budget. 21 scenarios × N samples × up to 20 turns each.
+
+## Related
+
+[honest-evals](https://github.com/weiscadence/honest-evals) is the general toolkit this eval borrows its discipline from: hash-chained claim ledgers, read-only re-runs, selection-effect estimates, planted canaries and threshold sweeps (180 tests at `6672cbe`). limit-eval is a separate repo and shares no code with it.
