@@ -82,4 +82,4 @@ An API key in `ANTHROPIC_API_KEY` (optionally `LIMIT_EVAL_MODEL`), decoy tool sc
 
 ## Related
 
-[honest-evals](https://github.com/weiscadence/honest-evals) is the general toolkit this eval borrows its discipline from: hash-chained claim ledgers, read-only re-runs, selection-effect estimates, planted canaries and threshold sweeps (180 tests at `6672cbe`). limit-eval is a separate repo and shares no code with it.
+[honest-evals](https://github.com/weiscadence/honest-evals) is the general toolkit this eval borrows its discipline from: hash-chained claim ledgers, read-only re-runs, selection-effect estimates, planted canaries and threshold sweeps (182 tests at `c891022`). limit-eval is a separate repo and shares no code with it.
