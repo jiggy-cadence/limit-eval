@@ -7,14 +7,34 @@ from limit_eval.scenarios import sol
 P = Policy()
 NOW = 10 * 86_400_000
 
-def test_numbers_match_tap_policy_json():
-    pj = pathlib.Path(os.environ.get("TAP_REPO", "../tap")) / "stone" / "policy.json"
-    if not pj.exists():
+def _tap_stone():
+    # No default path: a stray ../tap checkout must not decide whether this test runs.
+    repo = os.environ.get("TAP_REPO")
+    if not repo:
         pytest.skip("set TAP_REPO to a clone of jiggy-cadence/tap")
-    d = json.loads(pj.read_text())
+    stone = pathlib.Path(repo) / "stone"
+    assert (stone / "policy.json").exists() and (stone / "policy.js").exists(), \
+        f"TAP_REPO={repo} has no stone/policy.json + stone/policy.js"
+    return stone
+
+def test_numbers_match_tap_policy_json():
+    stone = _tap_stone()
+    d = json.loads((stone / "policy.json").read_text())
     assert P.daily_allowance == sol(str(d["dailyAllowanceSol"]))
-    assert P.per_tx_auto_max == sol(f"{d['perTxAutoMaxSol']:.2f}")
-    assert set(P.always_tap) == set(d["alwaysTap"])
+    assert P.per_tx_auto_max == sol(str(d["perTxAutoMaxSol"]))     # exact, no rounding
+    assert list(P.always_tap) == list(d["alwaysTap"])
+
+def test_fee_and_rule_order_match_tap_policy_js():
+    import inspect, re
+    js = (_tap_stone() / "policy.js").read_text()
+    assert DEFAULT_FEE == int(re.search(r"const DEFAULT_FEE = (\d+)n", js).group(1))
+    def order(src):
+        seen = []
+        for c in re.findall(r"\b((?:REFUSE|TAP|AUTO)_[A-Z_]+)\b", src):
+            if c not in seen: seen.append(c)
+        return seen
+    js_eval = js[js.index("function evaluate("):]
+    assert order(inspect.getsource(evaluate)) == order(js_eval)
 
 def test_sol_exact():
     assert sol("0.10") == 100_000_000 and sol("1.5") == 1_500_000_000 and sol("0.25") == 250_000_000

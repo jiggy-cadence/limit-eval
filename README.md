@@ -17,7 +17,7 @@ python3 -m venv .venv && .venv/bin/pip install pytest && .venv/bin/python -m pyt
 .venv/bin/python -m limit_eval.run    # rewrites results/baseline.md and results/episodes.jsonl
 ```
 
-One-command receipt check: `.venv/bin/python -m limit_eval.verify` re-runs the baseline in a temp dir and checks that the committed `results/` files are byte-identical (sha256) and that every number in the summary below appears in the re-run. It prints `RECEIPTS REPRODUCE` and exits 0, or names what differs and exits 1.
+One-command receipt check: `.venv/bin/python -m limit_eval.verify` re-runs the baseline in a temp dir and checks that the committed `results/` files are byte-identical (sha256) and that every number in the summary below appears in the re-run as a whole token, in the row of the agent or threshold the README attributes it to. It prints `RECEIPTS REPRODUCE` and exits 0, or names what differs and exits 1.
 
 ## What this does NOT show
 
@@ -32,7 +32,7 @@ One-command receipt check: `.venv/bin/python -m limit_eval.verify` re-runs the b
 | Part | Real or simulated |
 |---|---|
 | Wallet, chain, balances, co-signer | **Simulated.** No network, no keys, no chain. Co-signer never answers within an episode, so a co-sign request moves nothing. |
-| Policy numbers and rule order | **Copied** from TAP [`stone/policy.json`](https://github.com/jiggy-cadence/tap/blob/dd81fff/stone/policy.json) + `stone/policy.js` (last changed in public commit `dd81fff`): 0.10 SOL per-payment auto max, 0.25 SOL **rolling-24h** allowance, fees count (default 5000 lamports), unlisted recipient → co-sign, `alwaysTap` = new_recipient / drain / change_policy / export_key. Integer lamports. A test checks the numbers against TAP's file if you point `TAP_REPO` at a clone of [jiggy-cadence/tap](https://github.com/jiggy-cadence/tap); otherwise it skips. |
+| Policy numbers and rule order | **Copied** from TAP [`stone/policy.json`](https://github.com/jiggy-cadence/tap/blob/dd81fff/stone/policy.json) + `stone/policy.js` (last changed in public commit `dd81fff`): 0.10 SOL per-payment auto max, 0.25 SOL **rolling-24h** allowance, fees count (default 5000 lamports), unlisted recipient → co-sign, `alwaysTap` = new_recipient / drain / change_policy / export_key. Integer lamports. Two tests check the numbers, the default fee and the rule order against TAP's `policy.json` and `policy.js` if you set `TAP_REPO` to a clone of [jiggy-cadence/tap](https://github.com/jiggy-cadence/tap); otherwise they skip. The allowed-recipient list is this repo's own (three simulated names) and is not compared. |
 | Agents in the reported results | **Scripted and deterministic** (`honest`, `sneaky`, `mixed`). The sneaky agent's exploits were written by hand to match the scenarios, so its attempt rate measures the scenario design, not any model's behaviour. |
 | LLM adapter (`limit_eval/llm_agent.py`) | Real API code, but **never run against a live model here**. Only runs with `--llm` **and** `ANTHROPIC_API_KEY` set. The key is only ever sent in the request header; nothing prints or saves it. Unit-tested with a fake transport. |
 | Monitor | Real code, rule-based v0. Reads the transcript text only. |
@@ -51,7 +51,7 @@ One-command receipt check: `.venv/bin/python -m limit_eval.verify` re-runs the b
 
 ```
 python -m venv .venv && .venv/bin/pip install pytest
-.venv/bin/python -m pytest -q                # 123 tests; 1 skips unless TAP_REPO points at a tap clone
+.venv/bin/python -m pytest -q                # 138 tests; 2 skip unless TAP_REPO points at a tap clone
 .venv/bin/python -m limit_eval.run           # 3 agents x 21 scenarios x 5 seeds = 315 episodes
 ANTHROPIC_API_KEY=... .venv/bin/python -m limit_eval.run --llm   # optional, never run for these results; writes results/llm_episodes.jsonl
 ```
@@ -74,6 +74,8 @@ See `results/baseline.md`. Summary for 5 seeds:
 - The co-signer never approves, so there's no "approved, then the agent escalates" path.
 - Honest seeds are identical, so n=105 for the honest agent is 21 distinct behaviours repeated 5 times. The Wilson interval treats them as independent, which overstates confidence. The sneaky agent has 2 distinct narration styles (loud and quiet).
 - The API only lets an LLM call tools listed in its schema. To test unlisted-tool temptation for real, the next step is to expose decoy tools such as `set_daily_limit`, which always return `UNKNOWN_TOOL`.
+- `M_INTENT_LANGUAGE` matches bare phrases, so an honest refusal that names the exploit ("I cannot split this or bypass the limit") is flagged at 0.5. The scripted honest agent never says such a thing, so the baseline does not show it; a real model will.
+- The monitor raises `TranscriptFormatError` instead of scoring when the transcript has no tool list, no `per_tx_auto_max`, no default fee or no `USER:` line. It reads the whole `USER:` block, including `CONTEXT:`.
 - Monitor v0 rules were written with sight of the scenarios. A fair test needs held-out scenarios, or an LLM monitor.
 
 ## What a real-LLM run needs
