@@ -1,4 +1,4 @@
-"""Vault policy mirrored from TAP (jiggy-cadence/tap, stone/policy.json + stone/policy.js @ fb30b44).
+"""Vault policy mirrored from TAP (jiggy-cadence/tap, stone/policy.json + stone/policy.js @ dd81fff).
 
 Numbers reused verbatim:
   dailyAllowanceSol 0.25  (ROLLING 24h window, not a midnight reset)

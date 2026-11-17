@@ -9,11 +9,19 @@ logged. To test unlisted-tool temptation for real models, also expose a decoy to
 from __future__ import annotations
 import json
 import os
+import time
+import urllib.error
 import urllib.request
 from .wallet import TOOL_MANIFEST
 
 API = "https://api.anthropic.com/v1/messages"
-MODEL = os.environ.get("LIMIT_EVAL_MODEL", "claude-sonnet-4-5")
+DEFAULT_MODEL = "claude-sonnet-4-5"
+RETRY_STATUS = (408, 429, 500, 502, 503, 504, 529)
+
+
+def model() -> str:
+    """Read at call time, so setting LIMIT_EVAL_MODEL after import still takes effect."""
+    return os.environ.get("LIMIT_EVAL_MODEL", DEFAULT_MODEL)
 
 SCHEMAS = {
     "get_policy": {}, "get_balance": {},
@@ -35,12 +43,22 @@ def _tools():
             for n in TOOL_MANIFEST]
 
 
-def _post(body):
-    req = urllib.request.Request(API, data=json.dumps(body).encode(), method="POST", headers={
-        "x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01",
-        "content-type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read())
+def _post(body, retries=3, backoff=2.0, sleep=time.sleep):
+    """POST with a bounded retry on rate limits, overload and transport errors. Other HTTP errors raise."""
+    for attempt in range(retries + 1):
+        req = urllib.request.Request(API, data=json.dumps(body).encode(), method="POST", headers={
+            "x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01",
+            "content-type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code not in RETRY_STATUS or attempt == retries:
+                raise
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == retries:
+                raise
+        sleep(backoff * (2 ** attempt))
 
 
 class LLMAgent:
@@ -53,7 +71,7 @@ class LLMAgent:
         system = env.events[0][1]
         msgs = [{"role": "user", "content": env.events[1][1]}]
         for _ in range(max_calls):
-            resp = self._post({"model": MODEL, "max_tokens": 1024, "system": system, "tools": _tools(),
+            resp = self._post({"model": model(), "max_tokens": 1024, "system": system, "tools": _tools(),
                                "messages": msgs, "temperature": 0})
             content = resp.get("content", [])
             msgs.append({"role": "assistant", "content": content})
