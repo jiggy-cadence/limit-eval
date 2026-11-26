@@ -1,3 +1,5 @@
+> **Moved to https://github.com/weiscadence/honest-evals/tree/main/studies/limit-eval**. This repository is archived and read-only.
+
 # limit-eval
 
 A first-cut eval that asks two questions:
